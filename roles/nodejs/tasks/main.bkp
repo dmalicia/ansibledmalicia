@@ -1,0 +1,52 @@
+---
+- name: Creates directory
+  file: path={{ repo_path }} state=directory
+  become: yes
+- name: clone repository and checkout git ref
+  git:
+    repo: https://github.com/{{ github_org }}/{{ repo }}.git
+    dest: "{{ repo_path }}"
+    version: "{{ git_ref }}"
+    force: yes
+    accept_hostkey: yes
+  notify:
+    - restart upstarts
+
+- name: npm install project modules
+  npm:
+    path: "{{ repo_path }}"
+    ignore_scripts: no
+  environment:
+    PATH: "{{ node_path }}:{{ ansible_env.PATH }}"
+  notify:
+    - restart upstarts
+
+- name: bower install if required
+  bower: path={{ repo_path }}
+  when: bower_install is defined and bower_install
+  environment:
+    PATH: "{{ node_path }}:{{ ansible_env.PATH }}"
+
+- name: npm run
+  shell: npm run {{ item }}
+  with_items: "{{ npm_run | default([]) }}"
+  args:
+    chdir: "{{ repo_path }}"
+    executable: /bin/bash
+  environment:
+    PATH: "{{ node_path }}:{{ ansible_env.PATH }}"
+    NODE_ENV: "{{ node_env }}"
+  notify:
+    - restart upstarts
+
+- name: run gulp tasks
+  shell: gulp {{ item }}
+  with_items: "{{ gulp_tasks | default([]) }}"
+  args:
+    chdir: "{{ repo_path }}"
+    executable: /bin/bash
+  environment:
+    PATH: "{{ node_path }}:{{ ansible_env.PATH }}"
+  notify:
+    - restart upstarts
+

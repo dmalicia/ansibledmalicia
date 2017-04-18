@@ -1,0 +1,88 @@
+---
+- name: Install dependencies
+  apt: pkg={{ item }} update_cache=yes cache_valid_time=3600
+  with_items:
+    - build-essential
+    - libssl-dev
+    - nodejs-legacy
+  tags: nvm
+
+- name: Install nvm
+  sudo: yes
+  sudo_user: "{{ nvm.user }}"
+  git: repo=https://github.com/creationix/nvm.git dest=~/.nvm version={{ nvm.version }}
+  tags: nvm
+
+- name: Source nvm in ~/.profile
+  sudo: yes
+  sudo_user: "{{ nvm.user }}"
+  lineinfile: >
+    dest=~/.profile
+    line="source ~/.nvm/nvm.sh"
+    create=yes
+  tags: nvm
+
+- name: Install {{ nvm.node_version }}
+  command: sudo -iu {{ nvm.user }} nvm install {{ nvm.node_version }}
+  register: nvm_install_result
+  changed_when: "'is already installed.' not in nvm_install_result.stdout"
+  tags: nvm
+
+- name: Check if {{ nvm.node_version }} is the default node version
+  shell: sudo -iu {{ nvm.user }} nvm ls | grep -e 'default -> {{ nvm.node_version }}'
+  register: nvm_check_default
+  changed_when: False
+  ignore_errors: True
+  tags: nvm
+
+- name: Set default node version to {{ nvm.node_version }}
+  command: sudo -iu {{ nvm.user }} nvm alias default {{ nvm.node_version }}
+  when: nvm_check_default|failed
+  tags: nvm
+
+- name: Creates directory
+  file: path={{ repo_path }} state=directory
+  become: yes
+
+- name: clone repository and checkout git ref
+  git:
+    repo: https://github.com/{{ github_org }}/{{ repo }}.git
+    dest: "{{ repo_path }}"
+    version: "{{ git_ref }}"
+    force: yes
+    accept_hostkey: yes
+
+- name: Clean node-modules artifacts
+  file:
+   state: absent
+   path: "{{ repo_path }}/node-modules"
+
+- name: install npm
+  apt:  pkg=npm state=present
+  tags: npm
+
+- name: Install packages based on package.json.
+  npm:
+    path: "{{ repo_path }}" 
+  tags: npm
+  
+- name: Configure database entry 
+  template: src=config.json.j2 dest=/usr/local/webapp/config/config.json
+
+- name: Configure upstart script for webapp  
+  template: src=webapp.service.j2 dest=/etc/systemd/system/webapp.service
+  notify: restart webapp 
+  tags: nvm
+
+- name: Configure upstart script for webapp-ui
+  template: src=webappui.service.j2 dest=/etc/systemd/system/webappui.service
+  notify: restart webappui
+  tags: nvm
+
+- name: Set ufw to allow webapp port 
+  ufw: rule=allow port=3000 
+  tags: ufw
+
+- name: Set ufw to allow webappui port 
+  ufw: rule=allow port=8091
+  tags: ufw

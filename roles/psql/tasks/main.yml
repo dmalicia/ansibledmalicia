@@ -1,0 +1,71 @@
+---
+- include_vars: secrets.yml
+- name: add postgres apt key
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+  become: true
+
+- name: add postgres PPA
+  apt_repository:
+    repo: deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main
+    state: present
+  become: true
+
+- name: install postgres
+  apt:
+    update_cache: yes
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - postgresql
+    - postgresql-contrib
+    - libpq-dev
+    - python-psycopg2
+  become: true
+
+- name: Start the Postgresql service
+  sudo: yes
+  service:
+   name: postgresql 
+   state: started
+   enabled: true
+
+- name: create postgres db
+  postgresql_db: name="{{ database_name }}" 
+  with_items: postgres_dbs
+  become: true
+  become_user: postgres
+
+- name: create db user
+  postgresql_user: db="{{ database_name }}" name="{{ database_username }}" password="{{ database_password }}" priv="{{ database_priv }}"
+  become: true
+  become_user: postgres
+
+- name: Init Database
+  template: src=dbinit.sh.j2 dest=/usr/local/dbinit.sh
+  tags: psql 
+
+- name: Table Creation SQL template 
+  template: src=init.sql.j2 dest=/usr/local/init.sql
+  tags: psql 
+
+- name: Configure psql to accept webserver connections 
+  template: src=pg_hba.conf.j2 dest=/etc/postgresql/9.6/main/pg_hba.conf
+  notify: restart postgresql 
+  tags: psql
+
+- name: Psql allow remote connection
+  lineinfile: 
+    dest: /etc/postgresql/9.6/main/postgresql.conf
+    state: present
+    line: "listen_addresses = '*'"
+  notify: restart postgresql 
+
+- name: PSQL table creation
+  command: sh /usr/local/dbinit.sh
+  tags: psql
+
+- name: Set ufw to allow webapp port
+  ufw: rule=allow port=5432
+  tags: ufw

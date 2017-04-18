@@ -1,0 +1,11 @@
+ufw_package: ufw
+ufw_rules: [{ port: 22, rule: allow }]
+ufw_applications: []
+ufw_ipv6: "no"
+ufw_default_input_policy: DROP
+ufw_default_output_policy: ACCEPT
+ufw_default_forward_policy: DROP
+ufw_default_application_policy: SKIP
+ufw_state: enabled
+ufw_logging: "off"
+ufw_reset: yes

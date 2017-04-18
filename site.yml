@@ -1,0 +1,21 @@
+---
+## This playbook deploys the whole application stack in this site.  
+
+# Apply common configuration to all hosts
+- hosts: all
+  gather_facts: no
+  pre_tasks:
+    - name: 'install python2'
+      raw: sudo apt-get -y install python-simplejson
+  roles:
+  - common
+
+- hosts: database-*
+  roles:
+  - psql 
+
+- hosts: loadbalancer-*
+  roles:
+  - haproxy
+  tags:
+  - haproxy

@@ -1,0 +1,11 @@
+[Unit]
+Description=webapp
+
+[Service]
+PIDFile=/run/webapp.pid
+WorkingDirectory=/usr/local/webapp
+ExecStart=/usr/bin/npm start
+User=root
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s QUIT $MAINPID
+PrivateTmp=true

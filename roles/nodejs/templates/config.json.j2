@@ -1,0 +1,11 @@
+{
+  "production":{
+    "psql": {
+    {% for host in groups['database'] %}
+    "url": "{{ host }}",
+    {% endfor %}
+"username": "dmro",
+"password": "diego"
+}}}
+
+

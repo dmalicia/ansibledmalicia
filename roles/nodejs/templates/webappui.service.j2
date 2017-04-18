@@ -1,0 +1,11 @@
+[Unit]
+Description=webappui
+
+[Service]
+PIDFile=/run/webappui.pid
+WorkingDirectory=/usr/local/webapp
+ExecStart=/usr/bin/npm run startui
+User=root
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s QUIT $MAINPID
+PrivateTmp=true

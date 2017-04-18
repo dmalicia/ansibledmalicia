@@ -1,0 +1,5 @@
+- name: Set firewall default policy
+  ufw: state=enabled policy=reject
+
+- name: Allow ssh 
+  ufw: rule=allow port=22 

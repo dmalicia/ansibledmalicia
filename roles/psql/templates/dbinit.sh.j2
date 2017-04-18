@@ -1,0 +1,3 @@
+{% for host in groups['database'] %}
+PGPASSWORD=diego psql -U dmro -f /usr/local/init.sql -h localhost catsordogs 
+{% endfor %}

@@ -1,0 +1,183 @@
+---
+- hosts: all
+  tasks: [] 
+- hosts: digitalocean
+  vars:
+    webserver_count: 2
+    database_count: 1
+    loadbalancer_count: 1
+    monitoring_count: 1
+
+  tasks:
+  - name: Include Ansible-Vault Vars for Deployment 
+    include_vars:
+      file: vars/secrets.yml
+
+  - name: Set Authorized key took from file
+    authorized_key:
+      user: root 
+      state: present
+      key: "{{ lookup('file', '~/.ssh/digitalocean.pub') }}"
+    become: yes
+
+  - name: Insert the Deployment Certificate in the server 
+    copy:
+      content="{{ do_cert }}"
+      dest=~/.ssh/do
+      mode=0400
+
+  - name: Insert on ssh config the identify for the file
+    lineinfile: dest=~/.ssh/config
+      line="IdentityFile ~/.ssh/do"
+      state=present
+
+  - name: Insert Digital Ocean Token from Ansible-Vault to digital_ocean.ini
+    lineinfile: dest=~/ansible-dmalicia/digital_ocean.ini
+      line="api_token = {{ do_token }}"
+      state=present
+
+  - name: Adding ssh key for static folder project
+    shell: eval $(ssh-agent -s); ssh-add ~/.ssh/digitalocean
+
+  - name: ensure ssh key exists
+    user: >
+      name={{ ansible_user_id }}
+      generate_ssh_key=yes
+      ssh_key_file=.ssh/digitalocean
+
+  - name: ensure key exists at DigitalOcean
+    digital_ocean: >
+      state=present
+      command=ssh
+      name=my_ssh_key
+      ssh_pub_key={{ lookup('file', '~/.ssh/digitalocean.pub') }}
+      api_token={{ do_token }}
+    register: my_ssh_key
+
+
+  - name: Creating webserver droplets
+    digital_ocean:
+      state=present
+      private_networking=yes
+      command=droplet
+      name=ws_{{ item }}
+      unique_name=yes
+      size_id=512mb
+      region_id=nyc3
+      image_id=ubuntu-16-04-x64
+      ssh_key_ids={{ my_ssh_key.ssh_key.id }}
+      api_token={{ do_token }}
+      wait=yes
+    register: webserver_details
+    with_sequence:
+        count={{ webserver_count }}
+
+  - name: Grouping webserver droplets
+    add_host: name={{ item.droplet.ip_address }}
+              groups=webserver
+    with_items: "{{ webserver_details.results }}"
+  
+  - name: tag a resource; creating the tag if it does not exists
+    digital_ocean_tag:
+      name: webserver
+      state: present
+      resource_id: "{{ item.droplet.id }}"
+    with_items: "{{ webserver_details.results }}" 
+    environment:
+      DO_API_TOKEN: "{{ do_token }}"
+
+
+  - name: Creating database droplets
+    digital_ocean:
+      state=present
+      private_networking=yes
+      command=droplet
+      name=db_{{ item }}
+      unique_name=yes
+      size_id=512mb
+      region_id=nyc3
+      image_id=ubuntu-16-04-x64
+      ssh_key_ids={{ my_ssh_key.ssh_key.id }}
+      api_token={{ do_token }}
+    register: database_details
+    with_sequence:
+        count={{ database_count }}
+
+  - name: Grouping database droplets
+    add_host: name={{ item.droplet.ip_address }}
+              groups=database
+    with_items: "{{ database_details.results }}"
+
+  - name: tag a resource; creating the tag if it does not exists
+    digital_ocean_tag:
+      name: database
+      state: present
+      resource_id: "{{ item.droplet.id }}"
+    with_items: "{{ database_details.results }}"
+    environment:
+      DO_API_TOKEN: "{{ do_token }}"
+
+
+  - name: Creating loadbalancer droplets
+    digital_ocean:
+      state=present
+      private_networking=yes
+      command=droplet
+      name=lb_{{ item }}
+      unique_name=yes
+      size_id=512mb
+      region_id=nyc3
+      image_id=ubuntu-16-04-x64
+      ssh_key_ids={{ my_ssh_key.ssh_key.id }}
+      api_token={{ do_token }}
+    register: loadbalancer_details
+    with_sequence:
+        count={{ loadbalancer_count }}
+
+  - name: Grouping loadbalancer droplets
+    add_host: name={{ item.droplet.ip_address }}
+              groups=loadbalancer
+    with_items: "{{ loadbalancer_details.results }}"
+
+  - name: Pause 15 seconds for DO Droplets 
+    pause: seconds=15
+
+  - name: tag a resource; creating the tag if it does not exists
+    digital_ocean_tag:
+      name: loadbalancer
+      state: present
+      resource_id: "{{ item.droplet.id }}"
+    with_items: "{{ loadbalancer_details.results }}"
+    environment:
+      DO_API_TOKEN: "{{ do_token }}"
+
+  - name: Setup the LoadBalancerFloat IP
+    command: python assign-ip 138.197.54.215 "{{ item.droplet.id }}"     
+    with_items: "{{ loadbalancer_details.results }}"
+    ignore_errors: yes
+
+- hosts: all
+  gather_facts: no
+  pre_tasks:
+    - name: 'install python2'
+      raw: sudo apt-get -y install python-simplejson
+  roles:
+  - common
+
+- hosts: database
+  roles:
+  - psql
+  tags: 
+  - psql
+
+- hosts: loadbalancer
+  roles:
+  - haproxy
+  tags:
+  - loadbalancer 
+
+- hosts: webserver 
+  roles:
+  - nodejs 
+  tags:
+  - webserver 

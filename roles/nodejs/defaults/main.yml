@@ -1,0 +1,26 @@
+---
+upstart_scripts: []
+npm_run: []
+gulp_tasks: []
+repo_path: /usr/local/webapp 
+repo: webapp 
+git_ref: master
+default_node_version: "v6.10.2"
+node_env: production
+global_node_modules:
+  - bower
+  - bunyan
+  - gulp
+  - typings
+  - typescript
+github_org: dmalicia 
+bower_install: no
+nvm:
+  user: '{{ ansible_user_id }}'
+  version: v0.4.0
+  node_version: '6'
+webapp_open_ports:
+  - 80
+  - 443
+  - 8888
+  - 22

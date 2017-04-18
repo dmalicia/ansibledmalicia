@@ -1,0 +1,20 @@
+---
+# This role installs HAProxy and configures it.
+
+- name: Download and install haproxy
+  apt: name=haproxy state=present
+
+- name: Configure the haproxy cnf file with hosts
+  template: src=haproxy.cfg.j2 dest=/etc/haproxy/haproxy.cfg
+  notify: restart haproxy
+
+- name: Start the haproxy service
+  service: name=haproxy state=started enabled=yes
+
+- name: Set ufw to allow http
+  ufw: rule=allow port=http
+  tags: ufw
+
+- name: Set ufw to allow 8080 
+  ufw: rule=allow port=8080
+  tags: ufw
