@@ -9,9 +9,12 @@ git clone https://github.com/dmalicia/ansible.git
 
 ## Running the tests
 
- #First run without dynamic inventory
+ # First run without dynamic inventory
+ 
  ansible-playbook digitalocean.yml --vault-password-file vault_pass.txt
- #Next runs with dynamic inventory
+ 
+ # Next runs with dynamic inventory
+ 
  ansible-playbook digitalocean.yml -i digital_ocean.py --vault-password-file vault_pass.txt
 
 Application passwords and services passwords are protected by ansible-vault ( vault-pass.txt )
