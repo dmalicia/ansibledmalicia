@@ -1,4 +1,4 @@
-# Anible Deployment LAMP
+# Ansible Deployment LAMP
 
 Simple LAMP on Digital Ocean written on Ansible
 
