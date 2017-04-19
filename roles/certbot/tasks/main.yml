@@ -23,7 +23,8 @@
   tags: certbot
 
 - name: Touch bundle file
-  command: touch /etc/letsencrypt/live/dmalicia.com/dmalicia.com.pem
+  file: /etc/letsencrypt/live/dmalicia.com/dmalicia.com.pem
+  state: touch
   become: yes
   tags: certbot2 
 

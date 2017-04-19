@@ -1,0 +1,105 @@
+---
+- hosts: all
+  tasks: [] 
+- hosts: digitalocean
+  vars:
+    webserver_count: 2
+    database_count: 1
+    loadbalancer_count: 1
+    monitoring_count: 1
+
+  tasks:
+  - name: Include Ansible-Vault Vars for Deployment 
+    include_vars:
+      file: vars/secrets.yml
+
+  - name: Set Authorized key took from file
+    authorized_key:
+      user: root 
+      state: present
+      key: "{{ lookup('file', '~/.ssh/digitalocean.pub') }}"
+    become: yes
+
+  - name: Insert the Deployment Certificate in the server 
+    copy:
+      content="{{ do_cert }}"
+      dest=~/.ssh/do
+      mode=0400
+
+  - name: Insert on ssh config the identify for the file
+    lineinfile: dest=~/.ssh/config
+      line="IdentityFile ~/.ssh/do"
+      state=present
+
+  - name: Insert Digital Ocean Token from Ansible-Vault to digital_ocean.ini
+    lineinfile: dest=~/ansibledmalicia/digital_ocean.ini
+      line="api_token = {{ do_token }}"
+      state=present
+
+  - name: Adding ssh key for static folder project
+    shell: eval $(ssh-agent -s); ssh-add ~/.ssh/digitalocean
+
+  - name: ensure ssh key exists
+    user: >
+      name={{ ansible_user_id }}
+      generate_ssh_key=yes
+      ssh_key_file=.ssh/digitalocean
+
+  - name: ensure key exists at DigitalOcean
+    digital_ocean: >
+      state=present
+      command=ssh
+      name=my_ssh_key
+      ssh_pub_key={{ lookup('file', '~/.ssh/digitalocean.pub') }}
+      api_token={{ do_token }}
+    register: my_ssh_key
+
+
+  - name: Destroying webserver droplets
+    digital_ocean:
+      state=absent
+      private_networking=yes
+      command=droplet
+      name=ws_{{ item }}
+      unique_name=yes
+      size_id=512mb
+      region_id=nyc3
+      image_id=ubuntu-16-04-x64
+      ssh_key_ids={{ my_ssh_key.ssh_key.id }}
+      api_token={{ do_token }}
+      wait=yes
+    register: webserver_details
+    with_sequence:
+        count={{ webserver_count }}
+
+  - name: Destroying database droplets
+    digital_ocean:
+      state=absent
+      private_networking=yes
+      command=droplet
+      name=db_{{ item }}
+      unique_name=yes
+      size_id=512mb
+      region_id=nyc3
+      image_id=ubuntu-16-04-x64
+      ssh_key_ids={{ my_ssh_key.ssh_key.id }}
+      api_token={{ do_token }}
+    register: database_details
+    with_sequence:
+        count={{ database_count }}
+
+  - name: Destroying loadbalancer droplets
+    digital_ocean:
+      state=absent
+      private_networking=yes
+      command=droplet
+      name=lb_{{ item }}
+      unique_name=yes
+      size_id=512mb
+      region_id=nyc3
+      image_id=ubuntu-16-04-x64
+      ssh_key_ids={{ my_ssh_key.ssh_key.id }}
+      api_token={{ do_token }}
+    register: loadbalancer_details
+    with_sequence:
+        count={{ loadbalancer_count }}
