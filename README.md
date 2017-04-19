@@ -19,6 +19,11 @@ git clone https://github.com/dmalicia/ansible.git
 
 Application passwords and services passwords are protected by ansible-vault ( vault-pass.txt )
 
+
+ # To destroy all machines
+ 
+ ansible-playbook destroydigitalocean.yml --vault-password-file vault_pass.txt
+
 ## Built With
 
 * [Ansible]
