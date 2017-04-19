@@ -5,7 +5,7 @@
   apt: name=haproxy state=present
 
 - name: Configure the haproxy cnf file with hosts
-  template: src=haproxy.cfg.j2 dest=/etc/haproxy/haproxy.cfg
+  template: src=haproxy-ssl.cfg.j2 dest=/etc/haproxy/haproxy.cfg
   notify: restart haproxy
 
 - name: Start the haproxy service
@@ -17,4 +17,8 @@
 
 - name: Set ufw to allow 8080 
   ufw: rule=allow port=8080
+  tags: ufw
+
+- name: Set ufw to allow https
+  ufw: rule=allow port=https
   tags: ufw

@@ -32,7 +32,7 @@
       state=present
 
   - name: Insert Digital Ocean Token from Ansible-Vault to digital_ocean.ini
-    lineinfile: dest=~/ansible-dmalicia/digital_ocean.ini
+    lineinfile: dest=~/ansibledmalicia/digital_ocean.ini
       line="api_token = {{ do_token }}"
       state=present
 
@@ -173,6 +173,7 @@
 - hosts: loadbalancer
   roles:
   - haproxy
+  - certbot
   tags:
   - loadbalancer 
 

@@ -1,0 +1,35 @@
+---
+- name: Add Certbot Repository 
+  apt_repository:
+    repo: 'ppa:certbot/certbot'
+  become: yes
+  tags: certbot
+
+- name: install common apt packages
+  apt: pkg={{item}} state=present update_cache=yes
+  with_items:
+    - certbot 
+  become: yes 
+  tags: certbot
+
+- name: run certbot
+  command: >
+    certbot certonly --non-interactive
+    --email dmalicia@gmail.com 
+    --agree-tos 
+    -d dmalicia.com
+    --standalone
+  become: yes
+  tags: certbot
+
+- name: Touch bundle file
+  command: touch /etc/letsencrypt/live/dmalicia.com/dmalicia.com.pem
+  become: yes
+  tags: certbot2 
+
+- name: Create a bundle with key and cert for Offload
+  shell: cat /etc/letsencrypt/live/dmalicia.com/fullchain.pem /etc/letsencrypt/live/dmalicia.com/privkey.pem > /etc/letsencrypt/live/dmalicia.com/dmalicia.com.pem
+  become: yes
+  tags: certbot2
+
+

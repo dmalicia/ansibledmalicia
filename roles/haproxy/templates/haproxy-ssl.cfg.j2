@@ -1,0 +1,63 @@
+global
+    log         127.0.0.1 local2 
+
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    user        root
+    group       root
+    daemon
+
+    # turn on stats unix socket
+    stats socket /var/lib/haproxy/stats level admin
+
+defaults
+    mode                    http 
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option http-server-close
+    option forwardfor       except 127.0.0.0/8
+    option                  redispatch
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 3000
+
+
+frontend www-http
+   bind *:80
+   reqadd X-Forwarded-Proto:\ http
+   default_backend app
+
+frontend webappui 
+    bind *:443 ssl crt /etc/letsencrypt/live/dmalicia.com/dmalicia.com.pem
+    mode http
+    reqadd X-Forwarded-Proto:\ https
+    default_backend app
+
+backend app
+    redirect scheme https if !{ ssl_fc }
+    balance     roundrobin
+   balance     {{ balance }}
+    {% for host in groups['webserver'] %}
+        server {{ host }} {{ host }}:{{ 8091 }}
+    {% endfor %}
+
+frontend apiui
+    bind *:8080 ssl crt /etc/letsencrypt/live/dmalicia.com/dmalicia.com.pem
+    mode http
+    reqadd X-Forwarded-Proto:\ https
+    default_backend api
+
+backend api
+    balance     roundrobin
+    {% for host in groups['webserver'] %}
+        server {{ host }} {{ host }}:{{ 3000 }}
+    {% endfor %}
+
