@@ -1,24 +1,8 @@
 ---
-# This role contains common plays that will run on all nodes.
 - name: install common apt packages
   apt: pkg={{item}} state=present update_cache=yes
   with_items:
-#    - build-essential
     - curl
-#    - git
-#    - python-dev
-#    - python-setuptools
-  tags:
-    - slowpack
-  become: yes
-
-- name: install nrpe
-  apt: state=latest pkg={{item}} update_cache=yes
-  with_items:
-    - nagios-plugins
-    - nagios-nrpe-server
-  tags:
-    - packages
   become: yes
 
 - name: Set firewall default policy

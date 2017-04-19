@@ -25,7 +25,7 @@
   become: true
 
 - name: Start the Postgresql service
-  sudo: yes
+  become: yes
   service:
    name: postgresql 
    state: started

@@ -139,8 +139,8 @@
               groups=loadbalancer
     with_items: "{{ loadbalancer_details.results }}"
 
-  - name: Pause 15 seconds for DO Droplets 
-    pause: seconds=15
+  - name: Pause 30 seconds for DO Droplets 
+    pause: seconds=30
 
   - name: tag a resource; creating the tag if it does not exists
     digital_ocean_tag:
